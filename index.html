@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>D3 Maps US</title>
+
+  <script src="https://unpkg.com/topojson@3"></script>
+</head>
+
+<body>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+	const width = 2500
+  const height = 700
+  const projection = d3.geoMercator()
+    .scale(180)
+    .rotate([0, 0])
+
+  const svg = d3.select('body')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+
+  const path = d3.geoPath()
+    .projection(projection)
+
+  const g = svg.append('g')
+
+  async function loadMap() {
+    const michelinStarData = await d3.csv('michelin_star.csv')
+    const data = michelinStarData.filter(d => d.michelin_award === 'THREE_STARS')
+
+    const topology = await d3.json('world-110m2.json')
+
+    g.selectAll('path')
+    // Use topojson here to extract the topology from the map data
+      .data(topojson.feature(topology, topology.objects.countries).features)
+      .enter()
+      .append('path')
+      .attr('d', path)
+      .attr('fill', 'lightgrey')
+      .attr('stroke', 'white')
+      .attr('stroke-width', 0.25)   
+
+      const infoBox = d3.select('svg')
+      .append('g')
+      .attr('class', 'info-box')
+      .attr('display', 'none')    
+    
+    infoBox.append('rect')
+      .attr('width', 100)
+      .attr('height', 100)
+
+    infoBox
+      .append('text')
+      .text('0.0')
+      .attr('fill', 'white')
+      .attr('dx', 50)
+      .attr('dy', 50)
+      .attr('text-anchor', 'middle')
+      .attr('alignment-baseline', 'middle')
+      .attr('word-wrap', 'break-word')
+      .attr('font-size', 14)
+      .attr('font-family', 'Helvetica')
+
+    d3.select('svg')
+      .selectAll('circle')
+      .data(data)
+      .enter()
+      .append('circle')
+        .attr('cx', d => projection([d.lon, d.lat])[0])
+        .attr('cy', d => projection([d.lon, d.lat])[1])
+        .attr('r', 4)
+        .attr('fill', 'rgba(255,0,0,0.15')
+      .on('mouseover', function(e, d) {
+        d3.select(this)
+          .attr('stroke', '#f00')
+        d3.select('.info-box')
+          .attr('display', 'yes')
+          .attr('transform', `translate(${d3.select(this).attr('cx')}, ${d3.select(this).attr('cy')})`)
+          .attr('overflow-wrap', 'break-word')
+        d3.select('.info-box text')
+          .text(`Resto: ${d.name}, City: ${d.city}`)
+      })
+      .on('mouseout', function(d, i) {
+        d3.select(this)
+          .attr('stroke', 'none')
+        d3.select('.info-box')
+          .attr('display', 'none')
+      })
+
+
+    }
+
+  loadMap()
+</script>
+</body>
+</html>
